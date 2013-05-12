@@ -73,7 +73,13 @@ namespace YuiBuildProcess
                 return output.ToString();
             };
 
-            File.WriteAllText(commands["-out"], compressF());
+            using (var fs = new FileStream(commands["-out"], FileMode.Create))
+            {
+                using (var w = new StreamWriter(fs))
+                {
+                    w.Write(compressF());
+                }
+            }
         }
     }
 }
