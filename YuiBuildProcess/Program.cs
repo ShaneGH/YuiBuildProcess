@@ -16,15 +16,6 @@ namespace YuiBuildProcess
         const string Syntax = "Syntax: YuiBuildProcess file1.js file2.js directory1 -out file5.js [-compress true|false]\n\tIf order is important add order specific files first. They will be ignored if a directory is scanned later";
         static int Main(string[] args)
         {
-            args = new[] 
-            {
-                @"C:\Dev\Apps\BackToFront\BackToFront.Web\Scripts\BackToFront\Expressions\Expression.js",
-                @"C:\Dev\Apps\BackToFront\BackToFront.Web\Scripts\BackToFront", 
-                @"C:\Dev\Apps\BackToFront\BackToFront.Web\Scripts\linq-0.0.js",     
-                @"-out", 
-                @"hello.js" 
-            };
-
             if (args.Length == 0 || (args.Length == 1 && args[0].ToLower() == "help"))
             {
                 Console.WriteLine(Syntax);
