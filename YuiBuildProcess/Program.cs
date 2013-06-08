@@ -12,8 +12,8 @@ namespace YuiBuildProcess
 {
     class Program
     {
-        static readonly string[] ValidCommands = new[] { "-out", "-compress" };
-        const string Syntax = "Syntax: YuiBuildProcess file1.js file2.js directory1 -out file5.js [-compress true|false]\n\tIf order is important add order specific files first. They will be ignored if a directory is scanned later";
+        static readonly string[] ValidCommands = new[] { "-out", "-compress", "-wrap", "-exportVar" };
+        const string Syntax = "Syntax: YuiBuildProcess file1.js file2.js directory1 -out file5.js [-compress true|false] [-wrap true|false] [-exportVar \"varName, exportedName\"]\n\tIf order is important add order specific files first. They will be ignored if a directory is scanned later";
         static int Main(string[] args)
         {
             if (args.Length == 0 || (args.Length == 1 && args[0].ToLower() == "help"))
@@ -60,7 +60,7 @@ namespace YuiBuildProcess
                 return 1;
             }
 
-            Dictionary<string, string> commands = new Dictionary<string, string>();
+            List<KeyValuePair<string, string>> commands = new List<KeyValuePair<string, string>>();
             for (var j = 0; j < arguments.Count; j += 2)
             {
                 if (!ValidCommands.Contains(arguments[j]))
@@ -69,10 +69,10 @@ namespace YuiBuildProcess
                     return 1;
                 }
 
-                commands.Add(arguments[j], arguments[j + 1]);
+                commands.Add(new KeyValuePair<string, string>(arguments[j], arguments[j + 1]));
             }
 
-            if (!commands.ContainsKey("-out"))
+            if (!commands.Any(k => k.Key == "-out"))
             {
                 Console.WriteLine(Syntax);
                 return 1;
@@ -80,10 +80,43 @@ namespace YuiBuildProcess
 
             // default is true
             bool compress = true;
-            if (commands.ContainsKey("-compress") && !bool.TryParse(commands["-compress"], out compress))
+            if (commands.Any(k => k.Key == "-compress") && !bool.TryParse(commands.First(k => k.Key == "-compress").Value, out compress))
             {
                 Console.WriteLine(Syntax);
                 return 1;
+            }
+
+            // default is dalse
+            bool wrap = true;
+            if (commands.Any(k => k.Key == "-wrap") && !bool.TryParse(commands.First(k => k.Key == "-wrap").Value, out wrap))
+            {
+                Console.WriteLine(Syntax);
+                return 1;
+            }
+
+            if (wrap)
+            {
+                output.Insert(0, "(function () {\n");
+                foreach (var export in commands.Where(k => k.Key == "-exportVar"))
+                {
+                    var values = export.Value.Split(',').Select(a => a.Trim());
+                    if (values.Count() == 0 || values.Count() > 2)
+                    {
+                        Console.WriteLine(Syntax);
+                        return 1;
+                    }
+                    else if (values.Count() == 1)
+                    {
+                        output.AppendFormat("window.{0} = {0};\n", values.ElementAt(0));
+                    }
+                    else
+                    {
+                        output.AppendFormat("window[\"{1}\"] = {0};\n", values.ElementAt(0), values.ElementAt(1));
+                    }
+
+                }
+
+                output.AppendLine("})();");
             }
 
             Func<string> compressF = () =>
@@ -97,7 +130,7 @@ namespace YuiBuildProcess
                 return output.ToString();
             };
 
-            using (var fs = new FileStream(commands["-out"], FileMode.Create))
+            using (var fs = new FileStream(commands.First(k => k.Key == "-out").Value, FileMode.Create))
             {
                 using (var w = new StreamWriter(fs))
                 {
